@@ -1,0 +1,1424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Combobox Chips Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the working field in a card, with a short "things to try" list beside it. */
+:root {
+  --bg: #f3f6f6;
+  --surface: #ffffff;
+  --fg: #1d2526;
+  --muted: #5d6b6d;
+  --line: #d7e0e0;
+  --teal: #00796b;
+  --on-teal: #ffffff;
+  --primary: #1867c0;
+  --error: #b00020;
+  --success: #2e7d32;
+  --fill: rgba(29, 37, 38, 0.02);
+  --fill-hover: rgba(29, 37, 38, 0.05);
+  --field-line: rgba(29, 37, 38, 0.38);
+  --chip: rgba(29, 37, 38, 0.10);
+  --chip-sel: rgba(24, 103, 192, 0.18);
+  --scrim: rgba(10, 16, 17, 0.45);
+  --font: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101515; --surface: #182021; --fg: #e4ecec; --muted: #9fb0b2; --line: #2a3738;
+    --teal: #00796b; --on-teal: #ffffff; --primary: #64a8f0; --error: #ef6b7b; --success: #7cc98a;
+    --fill: rgba(228, 236, 236, 0.03); --fill-hover: rgba(228, 236, 236, 0.07);
+    --field-line: rgba(228, 236, 236, 0.38); --chip: rgba(228, 236, 236, 0.12);
+    --chip-sel: rgba(100, 168, 240, 0.28); --scrim: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101515; --surface: #182021; --fg: #e4ecec; --muted: #9fb0b2; --line: #2a3738;
+  --teal: #00796b; --on-teal: #ffffff; --primary: #64a8f0; --error: #ef6b7b; --success: #7cc98a;
+  --fill: rgba(228, 236, 236, 0.03); --fill-hover: rgba(228, 236, 236, 0.07);
+  --field-line: rgba(228, 236, 236, 0.38); --chip: rgba(228, 236, 236, 0.12);
+  --chip-sel: rgba(100, 168, 240, 0.28); --scrim: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.55; }
+.wrap {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 36px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+header { display: flex; flex-direction: column; gap: 8px; }
+h1 { margin: 0; font-size: 28px; font-weight: 500; line-height: 1.2; text-wrap: balance; }
+h2 { margin: 0; font-size: 13px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+p { margin: 0; max-width: 66ch; }
+.muted { color: var(--muted); }
+a { color: var(--primary); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 28px; align-items: start; }
+@media (max-width: 820px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.card-top {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--line);
+}
+.card-body { padding: 28px 20px 24px; min-width: 0; }
+.card-foot {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-top: 1px solid var(--line);
+}
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button {
+  font: 500 13px var(--font); color: var(--muted); background: none; border: 0; padding: 5px 12px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--chip); color: var(--fg); }
+.ctl-label { font-size: 13px; color: var(--muted); }
+.ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.text-btn {
+  font: 500 13px var(--font); color: var(--primary); background: none; border: 0; padding: 5px 8px;
+  border-radius: 6px; cursor: pointer;
+}
+.text-btn:hover { background: var(--fill-hover); }
+
+/* ----- The component ----- */
+.combo { max-width: 560px; margin-inline: auto; }
+.combo-row { display: flex; align-items: stretch; }
+.combo-row.top { flex-direction: column; }
+
+.picklist-btn {
+  width: 106px; flex: none; border: 0; border-radius: 4px 0 0 4px; padding: 8px;
+  background: var(--teal); color: var(--on-teal);
+  font: 500 14px/1.3 var(--font); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+.picklist-btn:hover { filter: brightness(1.08); }
+.combo-row.top .picklist-btn { width: 100%; height: 40px; border-radius: 4px 4px 0 0; }
+
+.field {
+  flex: 1 1 auto; min-width: 0; min-height: 125px; position: relative;
+  background: var(--fill);
+  border-top: 1px solid var(--field-line);
+  border-right: 1px solid var(--field-line);
+  border-bottom-right-radius: 4px;
+  cursor: text;
+  padding: 26px 12px 12px 16px;
+}
+.field::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--field-line);
+  transition: height 0.15s, background 0.15s;
+}
+.field:hover { background: var(--fill-hover); }
+.field:focus-within::after { height: 2px; background: var(--primary); }
+.combo-row.top .field { border-left: 1px solid var(--field-line); border-bottom-left-radius: 4px; }
+.field-label {
+  position: absolute; top: 6px; left: 16px; font-size: 12px; color: var(--muted); pointer-events: none;
+}
+.field:focus-within .field-label { color: var(--primary); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 6px 0 12px;
+  border-radius: 999px; background: var(--chip); font-size: 14px; max-width: 100%;
+  border: 2px solid transparent;
+}
+.chip.invalid { border-color: var(--error); padding-left: 8px; }
+.chip.selected { background: var(--chip-sel); }
+.chip svg { width: 18px; height: 18px; flex: none; fill: currentColor; }
+.chip .alert { color: var(--error); }
+.chip-close {
+  display: inline-flex; padding: 0; border: 0; background: none; color: var(--fg); opacity: 0.6;
+  cursor: pointer; border-radius: 50%;
+}
+.chip-close:hover { opacity: 0.9; }
+.chip-text-btn {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: text;
+  text-decoration: underline dotted; text-underline-offset: 3px; border-radius: 2px;
+}
+.chip-edit-input {
+  font: inherit; color: inherit; background: var(--surface); border: 0; border-radius: 2px;
+  padding: 0 2px; min-width: 0;
+}
+.main-input {
+  flex: 1 1 120px; min-width: 120px; border: 0; background: none; color: var(--fg);
+  font: 16px var(--font); padding: 4px 0; outline: none;
+}
+.chip-text-btn:focus-visible, .chip-edit-input:focus-visible, .chip-close:focus-visible,
+.picklist-btn:focus-visible, button:focus-visible, input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 2px;
+}
+.combo-message { min-height: 20px; padding: 4px 16px 0; font-size: 12px; color: var(--muted); }
+.combo-message.error { color: var(--error); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Stepper footer */
+.step-label { font-size: 13px; color: var(--muted); }
+.step-note { font-size: 13px; color: var(--error); }
+.step-done { font-size: 13px; color: var(--success); }
+.btn {
+  font: 500 14px var(--font); letter-spacing: 0.04em; text-transform: uppercase; border-radius: 4px;
+  padding: 8px 18px; cursor: pointer; border: 1px solid var(--line); background: none; color: var(--fg);
+}
+.btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+:root:not([data-theme="light"]) .btn.primary { color: #fff; }
+
+/* Things to try */
+.tips { display: flex; flex-direction: column; gap: 12px; }
+.tips ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.tips li { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+kbd {
+  font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 4px; padding: 0 5px; background: var(--surface);
+}
+.tips .try { font-weight: 500; }
+.footnote { font-size: 13px; color: var(--muted); max-width: 72ch; }
+
+/* Picklist dialog */
+.scrim {
+  position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px))
+           max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  z-index: 20;
+}
+.dialog {
+  background: var(--surface); color: var(--fg); border-radius: 6px; width: 100%; max-width: 400px;
+  max-height: 100%; overflow: auto; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  display: flex; flex-direction: column;
+}
+.dialog h3 { margin: 0; padding: 16px 24px 4px; font-size: 20px; font-weight: 500; }
+.dialog fieldset { border: 0; margin: 0; padding: 8px 24px; min-width: 0; }
+.dialog legend { font-size: 14px; color: var(--muted); padding: 0; margin-bottom: 8px; }
+.dialog label { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-family: var(--mono); font-size: 14px; cursor: pointer; }
+.dialog input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 16px 16px; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 480px) {
+  .card-body { padding: 22px 12px 18px; }
+  .picklist-btn { width: 88px; font-size: 13px; }
+}
+</style>
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+
+<style>
+/* Code half of the page */
+:root {
+  --accent: #00796b; --accent-soft: #e0f0ee; --code-bg: #f7faf9;
+  --tok-kw: #7b3fb0; --tok-str: #0f7a3d; --tok-com: #7d8b8d; --tok-tag: #00695c;
+  --tok-attr: #a3500b; --tok-num: #b0306a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent: #4fc3b4; --accent-soft: #15302d; --code-bg: #111a1b;
+    --tok-kw: #c79bf2; --tok-str: #8fd19e; --tok-com: #6f8284; --tok-tag: #5fd0c1;
+    --tok-attr: #f0b072; --tok-num: #f08cb8;
+  }
+}
+.code-wrap { padding-top: 8px; border-top: 1px solid var(--line); }
+.code-wrap > section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+h2.sec { font-size: 19px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--fg); }
+code.inline { font-family: var(--mono); font-size: 0.88em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+.panel-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--line); }
+.filename { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.tab, .copy { font: 500 13px var(--font); color: var(--muted); background: none; border: 1px solid transparent; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); }
+.tab:hover, .copy:hover { color: var(--fg); }
+.copy { border-color: var(--line); }
+.copy.done { color: var(--accent); border-color: var(--accent); }
+.actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.code { margin: 0; background: var(--code-bg); overflow: auto; max-height: 620px; }
+.code code { display: block; padding: 14px 16px; font-family: var(--mono); font-size: 13px; line-height: 1.55; tab-size: 2; white-space: pre; color: var(--fg); }
+.hljs-keyword, .hljs-built_in, .hljs-literal, .hljs-selector-pseudo { color: var(--tok-kw); }
+.hljs-string, .hljs-regexp, .hljs-template-variable { color: var(--tok-str); }
+.hljs-comment { color: var(--tok-com); font-style: italic; }
+.hljs-tag, .hljs-name, .hljs-selector-class, .hljs-selector-tag { color: var(--tok-tag); }
+.hljs-attr, .hljs-attribute, .hljs-property, .hljs-title { color: var(--tok-attr); }
+.hljs-number, .hljs-variable { color: var(--tok-num); }
+.notes { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 72ch; }
+.notes li::marker { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+
+<div class="wrap code-wrap" id="code">
+  <section aria-labelledby="h-file">
+    <h2 class="sec" id="h-file">The component</h2>
+    <p class="muted">Save as <code class="inline">ComboboxChips.vue</code>. The button comes in through a slot, so any existing button can be used as is.</p>
+    <div class="panel">
+      <div class="panel-bar">
+        <div class="tabs" role="tablist" aria-label="Parts of ComboboxChips.vue">
+          <button class="tab" role="tab" id="t-script" aria-selected="true" aria-controls="p-script">Script</button>
+          <button class="tab" role="tab" id="t-template" aria-selected="false" aria-controls="p-template" tabindex="-1">Template</button>
+          <button class="tab" role="tab" id="t-styles" aria-selected="false" aria-controls="p-styles" tabindex="-1">Styles</button>
+        </div>
+        <div class="actions">
+          <button class="copy" data-copy-active>Copy section</button>
+          <button class="copy" data-copy-full>Copy whole file</button>
+        </div>
+      </div>
+      <div role="tabpanel" id="p-script" aria-labelledby="t-script"><pre class="code"><code id="c-script" class="language-typescript">&lt;script setup lang=&quot;ts&quot;&gt;
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from &#x27;vue&#x27;
+
+// ----- Types for the pieces of Vuetify we reach into -----
+// These describe only what this file actually uses from the component ref,
+// so TypeScript stops treating it as `null`/`never`.
+interface ComboboxExposed {
+  $el: HTMLElement
+  search: string
+  selectionIndex: number
+}
+
+// Values the user has entered (v-model on this component); each one renders as a chip.
+const values = defineModel&lt;string[]&gt;({ default: () =&gt; [] })
+
+// Where the slotted button goes: &#x27;start&#x27; = left of the field, full height;
+// &#x27;top&#x27; = above the field, full width.
+withDefaults(defineProps&lt;{ buttonPosition?: &#x27;start&#x27; | &#x27;top&#x27; }&gt;(), {
+  buttonPosition: &#x27;start&#x27;,
+})
+
+// ----- Uppercase as you type -----
+// Uppercase an input&#x27;s text in place, keeping the caret where it was
+// (replacing the value would otherwise jump it to the end). Returns the text.
+function uppercaseInPlace(el: HTMLInputElement): string {
+  const upper = el.value.toUpperCase()
+  if (upper !== el.value) {
+    const { selectionStart, selectionEnd } = el
+    el.value = upper
+    if (selectionStart !== null &amp;&amp; selectionEnd !== null) {
+      el.setSelectionRange(selectionStart, selectionEnd)
+    }
+  }
+  return upper
+}
+
+// Main input: Vuetify reports each change of the typed text through
+// update:search. v-combobox keeps that text internally (it ignores a :search
+// prop), so write the uppercase version back through its exposed `search`,
+// then put the caret back where it was, since rewriting the input&#x27;s value
+// moves the caret to the end.
+function onSearchUpdate(text: string | null) {
+  const raw = text ?? &#x27;&#x27;
+  if (raw) duplicateNotice.value = &#x27;&#x27;
+  const upper = raw.toUpperCase()
+  const combo = comboRef.value
+  if (upper === raw || !combo) return
+  const el = combo.$el.querySelector&lt;HTMLInputElement&gt;(&#x27;input:not(.chip-edit-input)&#x27;)
+  const start = el?.selectionStart ?? null
+  const end = el?.selectionEnd ?? null
+  combo.search = upper
+  nextTick(() =&gt; {
+    if (el &amp;&amp; document.activeElement === el &amp;&amp; start !== null &amp;&amp; end !== null) {
+      el.setSelectionRange(start, end)
+    }
+  })
+}
+
+// Inline chip editor.
+function onEditInput(e: Event) {
+  draft.value = uppercaseInPlace(e.target as HTMLInputElement)
+}
+
+// Every value must look like AB-123-CDE (uppercase letters).
+// Swap in your own pattern and update the &quot;AA-999-AAA&quot; messages below to match.
+const CODE_PATTERN = /^[A-Z]{2}-\d{3}-[A-Z]{3}$/
+
+function isValidCode(value: unknown): boolean {
+  return CODE_PATTERN.test(String(value))
+}
+
+const invalidValues = computed(() =&gt; values.value.filter((v) =&gt; !isValidCode(v)))
+const hasInvalid = computed(() =&gt; invalidValues.value.length &gt; 0)
+
+// The message line under the field. It is linked to the input by
+// aria-describedby and is an aria-live region, so screen readers hear the instructions on focus
+// and hear the error as soon as it appears. The error names the failing values,
+// so it doesn&#x27;t rely on the red border alone.
+const fieldMessage = computed(() =&gt; {
+  if (duplicateNotice.value) return duplicateNotice.value
+  if (!hasInvalid.value) return &#x27;Format AA-999-AAA. Press Enter to add each value.&#x27;
+  const list = invalidValues.value.join(&#x27;, &#x27;)
+  return `Values must be in the format AA-999-AAA. Select a value to edit it, or remove it: ${list}`
+})
+
+// ----- No duplicate chips -----
+// Shown in the message line (so sighted users see why nothing was added, and
+// the live region reads it) until the user next types or the values change.
+const duplicateNotice = ref(&#x27;&#x27;)
+
+function showDuplicates(dupes: string[]) {
+  if (!dupes.length) return
+  const list = [...new Set(dupes)].join(&#x27;, &#x27;)
+  duplicateNotice.value =
+    dupes.length === 1 ? `${list} is already added.` : `Already added, skipped: ${list}.`
+}
+
+watch(values, () =&gt; (duplicateNotice.value = &#x27;&#x27;))
+
+// Enter in the main input with a value that&#x27;s already a chip. Vuetify would
+// &quot;re-select&quot; it, which moves the existing chip to the end, so catch Enter
+// first (capture phase on the wrapper, before Vuetify&#x27;s own handler), leave
+// the chips alone, clear the typed text and say why.
+function onRowKeydownCapture(e: KeyboardEvent) {
+  if (e.key !== &#x27;Enter&#x27; || editingIndex.value !== null) return
+  const target = e.target as HTMLElement | null
+  if (!target?.matches?.(&#x27;input:not(.chip-edit-input)&#x27;)) return
+  const combo = comboRef.value
+  if (!combo) return
+  if ((combo.selectionIndex ?? -1) &gt;= 0) return
+  const text = String(combo.search ?? &#x27;&#x27;).trim().toUpperCase()
+  if (!text || !values.value.includes(text)) return
+  e.preventDefault()
+  e.stopPropagation()
+  combo.search = &#x27;&#x27;
+  showDuplicates([text])
+}
+
+// Id for the message line, which the input points at with aria-describedby.
+const messageId = useId()
+
+// Screen-reader-only announcement of chips being added or removed.
+const announcement = ref(&#x27;&#x27;)
+watch(values, (now, before = []) =&gt; {
+  const added = now.filter((v) =&gt; !before.includes(v))
+  const removed = before.filter((v) =&gt; !now.includes(v))
+  const parts: string[] = []
+  if (added.length) parts.push(`Added ${added.join(&#x27;, &#x27;)}`)
+  if (removed.length) parts.push(`Removed ${removed.join(&#x27;, &#x27;)}`)
+  if (parts.length) announcement.value = `${parts.join(&#x27;. &#x27;)}. ${now.length} values.`
+})
+
+// ----- Editing a failing chip in place -----
+// The combobox component: used to find the inputs inside it and to read
+// which chip the arrow keys have highlighted (selectionIndex).
+const comboRef = ref&lt;ComboboxExposed | null&gt;(null)
+
+// v-combobox adds dropdown ARIA (aria-haspopup, aria-expanded, aria-controls,
+// aria-owns) to the field box and input. With role=&quot;&quot; there is no dropdown,
+// so JAWS would announce a plain edit box as &quot;collapsed&quot; / &quot;has popup&quot;.
+// Vuetify re-applies them on every render, so strip them whenever they appear.
+const MENU_ARIA = [&#x27;aria-haspopup&#x27;, &#x27;aria-expanded&#x27;, &#x27;aria-controls&#x27;, &#x27;aria-owns&#x27;]
+let ariaObserver: MutationObserver | undefined
+
+function stripMenuAria(root: HTMLElement) {
+  root.querySelectorAll(&#x27;.v-field, input:not(.chip-edit-input)&#x27;).forEach((el) =&gt; {
+    MENU_ARIA.forEach((name) =&gt; el.hasAttribute(name) &amp;&amp; el.removeAttribute(name))
+  })
+}
+
+onMounted(() =&gt; {
+  const root = comboRef.value?.$el
+  if (!root) return
+  stripMenuAria(root)
+  ariaObserver = new MutationObserver(() =&gt; stripMenuAria(root))
+  ariaObserver.observe(root, { subtree: true, attributes: true, attributeFilter: MENU_ARIA })
+})
+
+onBeforeUnmount(() =&gt; ariaObserver?.disconnect())
+
+// Index of the chip being edited (null when none) and the text being typed.
+const editingIndex = ref&lt;number | null&gt;(null)
+const draft = ref(&#x27;&#x27;)
+// Set when Escape cancels, so the blur that follows doesn&#x27;t save.
+let cancelling = false
+
+// Turn the chip&#x27;s text into an input and focus it. selectAll selects the
+// whole value (used when Tab lands on the chip); otherwise the caret goes
+// to the end, so typing fixes rather than replaces.
+function startEdit(index: number, { selectAll = false }: { selectAll?: boolean } = {}) {
+  editingIndex.value = index
+  draft.value = String(values.value[index] ?? &#x27;&#x27;)
+  nextTick(() =&gt; {
+    const input = comboRef.value?.$el.querySelector&lt;HTMLInputElement&gt;(&#x27;.chip-edit-input&#x27;)
+    if (!input) return
+    input.focus()
+    if (selectAll) {
+      input.select()
+    } else {
+      const end = input.value.length
+      input.setSelectionRange(end, end)
+    }
+  })
+}
+
+// Save the edit (Enter or leaving the input). An empty value removes the chip.
+// e is the blur event when the user tabbed/clicked away.
+function commitEdit(e?: FocusEvent) {
+  if (editingIndex.value === null) return
+  if (cancelling) {
+    cancelling = false
+    return
+  }
+  const index = editingIndex.value
+  const text = draft.value.trim()
+  editingIndex.value = null
+  // Chips are keyed by value, so changing the value rebuilds this chip and
+  // drops focus if it had just moved to the chip&#x27;s own X (Tab). Note that
+  // case so focus can be put back on the rebuilt chip.
+  const target = e?.target as HTMLElement | null | undefined
+  const chipEl = target?.closest(&#x27;.v-combobox__selection&#x27;)
+  const relatedTarget = (e?.relatedTarget ?? null) as Node | null
+  const focusStayedInChip = !!chipEl &amp;&amp; chipEl.contains(relatedTarget)
+  const next = [...values.value]
+  // Edited into a value that another chip already has: drop this chip.
+  const duplicate = !!text &amp;&amp; next.some((v, i) =&gt; i !== index &amp;&amp; v === text)
+  if (text &amp;&amp; !duplicate) next.splice(index, 1, text)
+  else next.splice(index, 1)
+  values.value = next
+  nextTick(() =&gt; {
+    if (focusStayedInChip) {
+      const chips = comboRef.value?.$el.querySelectorAll&lt;HTMLElement&gt;(&#x27;.v-combobox__selection&#x27;)
+      const chip = chips?.[index]
+      // Same chip&#x27;s X, or (if the chip was removed) the next chip&#x27;s first control.
+      const focusTarget = text &amp;&amp; !duplicate
+        ? chip?.querySelector&lt;HTMLElement&gt;(&#x27;.v-chip__close&#x27;)
+        : chip?.querySelector&lt;HTMLElement&gt;(&#x27;button&#x27;)
+      if (focusTarget) focusTarget.focus()
+      else focusMainInput()
+    }
+    if (duplicate) showDuplicates([text])
+    else if (!text) announcement.value = &#x27;Value removed.&#x27;
+    else if (isValidCode(text)) announcement.value = `Saved ${text}.`
+    else announcement.value = `Saved ${text}. Still not in the format AA-999-AAA.`
+  })
+}
+
+function cancelEdit() {
+  cancelling = true
+  editingIndex.value = null
+  announcement.value = &#x27;Edit cancelled.&#x27;
+  // Removing the input blurs it; the flag stops that blur from saving.
+  nextTick(() =&gt; (cancelling = false))
+}
+
+// After Enter or Escape, put focus back in the main input.
+function focusMainInput() {
+  nextTick(() =&gt;
+    comboRef.value?.$el
+      .querySelector&lt;HTMLInputElement&gt;(&#x27;input:not(.chip-edit-input)&#x27;)
+      ?.focus(),
+  )
+}
+
+// Tabbing onto a failing chip&#x27;s text goes straight into editing with the
+// value selected. A mouse press also focuses the button, so it&#x27;s flagged
+// and left to the click handler (caret at the end) instead.
+let pointerDown = false
+
+function onChipTextFocus(index: number) {
+  if (pointerDown) return
+  startEdit(index, { selectAll: true })
+}
+
+function onChipTextMousedown() {
+  pointerDown = true
+  // Cleared after the click (or if the press is dragged off the button).
+  setTimeout(() =&gt; (pointerDown = false), 500)
+}
+
+// Keys on a failing chip&#x27;s text button. Handled directly rather than relying
+// on the browser turning Enter/Space into a click, so nothing upstream can
+// swallow it.
+function onChipTextKeydown(e: KeyboardEvent, index: number) {
+  if ([&#x27;Enter&#x27;, &#x27; &#x27;].includes(e.key)) {
+    e.preventDefault()
+    startEdit(index)
+  }
+}
+
+// Keys in the main input. The combobox lets you move onto chips with the
+// Left/Right arrows (Backspace/Delete then removes the highlighted one).
+// Add: Enter on a highlighted failing chip edits it.
+function onComboKeydown(e: KeyboardEvent) {
+  if (editingIndex.value !== null) return
+  const selected = comboRef.value?.selectionIndex ?? -1
+  if (e.key !== &#x27;Enter&#x27; || selected &lt; 0) return
+  if (isValidCode(values.value[selected])) return
+  e.preventDefault()
+  startEdit(selected)
+}
+
+// Announce the chip the arrow keys land on, since the highlight is only visual.
+watch(
+  () =&gt; comboRef.value?.selectionIndex,
+  (index) =&gt; {
+    if (index == null || index &lt; 0) return
+    const value = values.value[index]
+    if (value === undefined) return
+    announcement.value = isValidCode(value)
+      ? `${value}. Press Delete to remove.`
+      : `${value}, not in the format AA-999-AAA. Press Enter to edit, Delete to remove.`
+  },
+)
+
+function onEditKeydown(e: KeyboardEvent) {
+  if (e.key === &#x27;Enter&#x27;) {
+    e.preventDefault()
+    commitEdit()
+    focusMainInput()
+  } else if (e.key === &#x27;Escape&#x27;) {
+    e.preventDefault()
+    cancelEdit()
+    focusMainInput()
+  }
+}
+
+// For parent components (hasInvalid is exposed below too): jump to the first
+// failing chip, in edit mode with its value selected (same as tabbing onto it).
+// With no failing chips, focus the main input instead. Returns true if a
+// failing chip was found.
+function focusFirstError(): boolean {
+  const index = values.value.findIndex((v) =&gt; !isValidCode(v))
+  if (index &lt; 0) {
+    focusMainInput()
+    nextTick(() =&gt; (announcement.value = &#x27;No values in error.&#x27;))
+    return false
+  }
+  startEdit(index, { selectAll: true })
+  return true
+}
+
+defineExpose({ focusFirstError, hasInvalid })
+&lt;/script&gt;</code></pre></div>
+      <div role="tabpanel" id="p-template" aria-labelledby="t-template" hidden><pre class="code"><code id="c-template" class="language-xml">&lt;template&gt;
+  &lt;div style=&quot;max-width: 560px; margin-inline: auto&quot;&gt;
+    &lt;!--
+      The button (passed in through the &quot;button&quot; slot) is a sibling of the
+      combobox, not inside it. Vuetify puts role=&quot;combobox&quot; on the .v-field
+      box, so anything in the prepend-inner slot becomes a child of the
+      combobox, and screen readers such as JAWS treat a combobox&#x27;s children
+      as part of it rather than as separate controls. Out here it&#x27;s a plain,
+      standalone button. CSS joins the two so they still look like one control.
+    --&gt;
+    &lt;div
+      class=&quot;combo-row&quot;
+      :class=&quot;{ &#x27;combo-row--top&#x27;: buttonPosition === &#x27;top&#x27; }&quot;
+      @keydown.capture=&quot;onRowKeydownCapture&quot;
+    &gt;
+      &lt;slot name=&quot;button&quot; /&gt;
+
+      &lt;!--
+        multiple + no items: typing a value and pressing Enter adds it to
+        v-model, and chips/closable-chips render each one as a chip whose
+        X removes it.
+
+        role=&quot;&quot;: Vuetify puts role=&quot;combobox&quot; on both the field box and the
+        input. There is no dropdown list here, so that role is misleading, and
+        on the box it hides the chips&#x27; remove buttons from JAWS (children of a
+        combobox aren&#x27;t exposed as separate controls). An empty role falls
+        back to the native semantics: a plain text input, and real buttons.
+      --&gt;
+      &lt;v-combobox
+        ref=&quot;comboRef&quot;
+        v-model=&quot;values&quot;
+        @keydown=&quot;onComboKeydown&quot;
+        @update:search=&quot;onSearchUpdate&quot;
+        class=&quot;tall-combobox&quot;
+        label=&quot;... or Enter Values&quot;
+        multiple
+        chips
+        closable-chips
+        hide-no-data
+        hide-details
+        role=&quot;&quot;
+        :aria-describedby=&quot;messageId&quot;
+        :aria-invalid=&quot;hasInvalid ? &#x27;true&#x27; : undefined&quot;
+      &gt;
+        &lt;!--
+          props carries the chip&#x27;s close handler; the combobox supplies its
+          text, size and closable through defaults. Failing values get a red border
+          plus an alert icon, so the state isn&#x27;t shown by color alone.
+          close-label names the value, so the X button reads &quot;Remove AB-123-CDE&quot;
+          instead of just &quot;Close&quot;.
+
+          Failing chips can be edited in place: their text is a button
+          (&quot;Edit AB-12&quot;) that swaps to an input inside the chip. Tabbing onto it
+          starts editing with the value selected; clicking it, or Enter/Space,
+          also starts editing. From the main input, Left/Right arrow onto a
+          failing chip and press Enter. Enter or
+          leaving the input saves, Escape cancels. The input and button stop
+          keydown/mousedown/click from bubbling, because the chip treats
+          Enter/Space as &quot;remove this chip&quot; and the combobox field reacts to
+          keys and clicks as if they were meant for its own input.
+        --&gt;
+        &lt;template #chip=&quot;{ props, item, index }&quot;&gt;
+          &lt;v-chip
+            v-bind=&quot;props&quot;
+            :class=&quot;{ &#x27;invalid-chip&#x27;: !isValidCode(item.title) }&quot;
+            :prepend-icon=&quot;isValidCode(item.title) ? undefined : &#x27;mdi-alert-circle-outline&#x27;&quot;
+            :close-label=&quot;`Remove ${item.title}`&quot;
+          &gt;
+            &lt;input
+              v-if=&quot;editingIndex === index&quot;
+              :value=&quot;draft&quot;
+              @input=&quot;onEditInput&quot;
+              class=&quot;chip-edit-input&quot;
+              :size=&quot;Math.max(draft.length, 10)&quot;
+              :aria-label=&quot;`Edit value ${item.title}`&quot;
+              :aria-describedby=&quot;messageId&quot;
+              @keydown.stop=&quot;onEditKeydown&quot;
+              @mousedown.stop
+              @click.stop
+              @blur=&quot;commitEdit&quot;
+            /&gt;
+            &lt;button
+              v-else-if=&quot;!isValidCode(item.title)&quot;
+              type=&quot;button&quot;
+              class=&quot;chip-text-btn&quot;
+              tabindex=&quot;0&quot;
+              :aria-label=&quot;`Edit ${item.title}, not in the format AA-999-AAA`&quot;
+              title=&quot;Click to edit&quot;
+              @keydown.stop=&quot;onChipTextKeydown($event, index)&quot;
+              @focus=&quot;onChipTextFocus(index)&quot;
+              @mousedown.stop=&quot;onChipTextMousedown&quot;
+              @click.stop=&quot;startEdit(index)&quot;
+            &gt;
+              {{ item.title }}
+            &lt;/button&gt;
+            &lt;template v-else&gt;{{ item.title }}&lt;/template&gt;
+          &lt;/v-chip&gt;
+        &lt;/template&gt;
+
+      &lt;/v-combobox&gt;
+    &lt;/div&gt;
+
+    &lt;!--
+      Message line, rendered here (not via the combobox&#x27;s messages) so the
+      button can match the field&#x27;s height. Red text only for the error, so
+      the field itself doesn&#x27;t go into its error state.
+    --&gt;
+    &lt;div
+      :id=&quot;messageId&quot;
+      class=&quot;combo-message text-caption&quot;
+      :class=&quot;{ &#x27;text-error&#x27;: hasInvalid }&quot;
+      aria-live=&quot;polite&quot;
+    &gt;
+      {{ fieldMessage }}
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;!-- Polite live region for add/remove announcements; visually hidden. --&gt;
+  &lt;div class=&quot;sr-only&quot; aria-live=&quot;polite&quot; aria-atomic=&quot;true&quot;&gt;{{ announcement }}&lt;/div&gt;
+&lt;/template&gt;</code></pre></div>
+      <div role="tabpanel" id="p-styles" aria-labelledby="t-styles" hidden><pre class="code"><code id="c-styles" class="language-css">&lt;style scoped&gt;
+/* Button and combobox side by side, the button as tall as the field. */
+.combo-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.combo-row .tall-combobox {
+  flex: 1 1 auto;
+}
+
+/* Give the field a taller box; it still grows past this as chips wrap. */
+.tall-combobox :deep(.v-field) {
+  min-height: 125px;
+  /* The filled variant only draws a bottom line; add top and right borders
+     in the same color and strength as that line. */
+  border-top: 1px solid rgba(var(--v-theme-on-surface), var(--v-field-border-opacity, 0.38));
+  border-right: 1px solid rgba(var(--v-theme-on-surface), var(--v-field-border-opacity, 0.38));
+  /* Square left corner where it meets the button; round the outer
+     bottom-right corner to match the button&#x27;s outer corners. */
+  border-top-left-radius: 0;
+  border-bottom-right-radius: 4px;
+}
+
+.combo-row--top {
+  flex-direction: column;
+}
+
+.combo-row--top .tall-combobox :deep(.v-field) {
+  /* Both top corners meet the button now. */
+  border-top-right-radius: 0;
+}
+
+.combo-message {
+  min-height: 20px;
+  padding: 4px 16px 0;
+}
+
+/*
+ * Lighter grey fill. The filled variant&#x27;s grey is an overlay of the text
+ * color at 4% opacity (more on hover/focus); these halve each of those.
+ */
+.tall-combobox :deep(.v-field.v-field--variant-filled .v-field__overlay) {
+  opacity: 0.02;
+}
+@media (hover: hover) {
+  .tall-combobox :deep(.v-field.v-field--variant-filled:hover .v-field__overlay) {
+    opacity: calc((0.02 + var(--v-hover-opacity) / 2) * var(--v-theme-overlay-multiplier));
+  }
+}
+.tall-combobox :deep(.v-field.v-field--variant-filled.v-field--focused .v-field__overlay) {
+  opacity: calc((0.02 + var(--v-focus-opacity) / 2) * var(--v-theme-overlay-multiplier));
+}
+
+/* Red border on chips whose value isn&#x27;t AA-999-AAA. */
+.tall-combobox :deep(.invalid-chip) {
+  border: 2px solid rgb(var(--v-theme-error));
+}
+
+/* Hidden visually but still read by screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The text of a failing chip: a button that looks like text, hinting it&#x27;s editable. */
+.chip-text-btn {
+  font: inherit;
+  color: inherit;
+  cursor: text;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  border-radius: 2px;
+}
+
+.chip-text-btn:focus-visible,
+.chip-edit-input:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 1px;
+}
+
+/* Inline input that replaces a chip&#x27;s text while editing. */
+.chip-edit-input {
+  font: inherit;
+  color: inherit;
+  background: rgb(var(--v-theme-surface));
+  border-radius: 2px;
+  padding: 0 2px;
+  min-width: 0;
+}
+&lt;/style&gt;
+
+&lt;style&gt;
+/*
+ * Unscoped on purpose: the button comes from the parent page through the
+ * &quot;button&quot; slot, and this component&#x27;s scoped styles can&#x27;t reach slotted
+ * content. Add class=&quot;picklist-btn&quot; to the button you pass in.
+ */
+.combo-row .picklist-btn {
+  height: auto !important;
+  /* Joined to the field: no gap, rounded only on its outer (left) corners. */
+  border-radius: 4px 0 0 4px;
+  /* The label wraps onto extra lines instead of widening the button. */
+  width: 106px;
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+/* Vuetify keeps button text on one line; allow wrapping here. */
+.combo-row .picklist-btn .v-btn__content {
+  white-space: normal;
+  line-height: 1.3;
+  text-align: center;
+}
+
+/* buttonPosition=&quot;top&quot;: button stacked above the field, same width as it. */
+.combo-row--top .picklist-btn {
+  width: 100%;
+  height: 40px !important;
+  border-radius: 4px 4px 0 0;
+}
+&lt;/style&gt;</code></pre></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-use">
+    <h2 class="sec" id="h-use">Using it on a page</h2>
+    <p class="muted">Bind it to the store through a computed getter and setter. Give the button you pass in <code class="inline">class="picklist-btn"</code> so it joins onto the field.</p>
+    <div class="panel">
+      <div class="panel-bar">
+        <span class="filename">YourStep.vue</span>
+        <button class="copy" data-copy="c-usage">Copy</button>
+      </div>
+      <pre class="code"><code id="c-usage" class="language-xml">&lt;script setup lang=&quot;ts&quot;&gt;
+import { computed, nextTick, ref } from &#x27;vue&#x27;
+import ComboboxChips from &#x27;@/components/ComboboxChips.vue&#x27;
+import { useYourStore } from &#x27;@/stores/yourStore&#x27;
+
+const store = useYourStore()
+
+// The store stays the source of truth. Every add, edit and removal
+// goes through setItems, then re-runs validation like the old
+// add/remove/update functions did.
+const items = computed({
+  get: () =&gt; store.items,
+  set: async (val: string[] | null) =&gt; {
+    store.setItems(val ?? [])
+    await nextTick()
+    validate()
+  },
+})
+
+const chipsRef = ref&lt;{ focusFirstError: () =&gt; boolean; hasInvalid: boolean } | null&gt;(null)
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;ComboboxChips ref=&quot;chipsRef&quot; v-model=&quot;items&quot;&gt;
+    &lt;template #button&gt;
+      &lt;!-- your existing picklist button, unchanged except for the class --&gt;
+      &lt;v-btn class=&quot;picklist-btn&quot; color=&quot;teal-darken-2&quot; variant=&quot;flat&quot; @click=&quot;openPicklist&quot;&gt;
+        Select from Picklist
+      &lt;/v-btn&gt;
+    &lt;/template&gt;
+  &lt;/ComboboxChips&gt;
+&lt;/template&gt;</code></pre>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-step">
+    <h2 class="sec" id="h-step">Blocking Next in a stepper</h2>
+    <p class="muted">The field uses <code class="inline">hide-details</code> and no <code class="inline">rules</code>, so the form's <code class="inline">validate()</code> won't see its errors. Check it in the Next handler instead.</p>
+    <div class="panel">
+      <div class="panel-bar">
+        <span class="filename">Next handler</span>
+        <button class="copy" data-copy="c-stepper">Copy</button>
+      </div>
+      <pre class="code"><code id="c-stepper" class="language-typescript">async function next() {
+  // Nothing entered yet (drop this if the list is optional).
+  if (!items.value.length) return
+
+  // An invalid chip: jump straight into editing it and stay on this step.
+  if (chipsRef.value?.hasInvalid) {
+    chipsRef.value.focusFirstError()
+    return
+  }
+
+  // Everything else on the step. Always await validate() here rather than
+  // reading the form&#x27;s v-model, which can hold a stale &quot;valid&quot;.
+  const { valid } = await form.value.validate()
+  if (valid) step.value++
+}</code></pre>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-notes">
+    <h2 class="sec" id="h-notes">Before using it</h2>
+    <ul class="notes">
+      <li>Replace <code class="inline">CODE_PATTERN</code> with the real format, and update the "AA-999-AAA" wording in the messages and labels to match.</li>
+      <li><code class="inline">useId</code> needs Vue 3.5 or later. On an older version, use any unique string for the message id.</li>
+      <li>The component reads <code class="inline">search</code> and <code class="inline">selectionIndex</code> from the Vuetify combobox. These aren't documented props, so recheck chip editing and duplicate handling after a Vuetify upgrade.</li>
+      <li>The button styles live in an unscoped style block at the end of the file, because scoped styles can't reach slotted content.</li>
+    </ul>
+  </section>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+const FULL_FILE = "<script setup lang=\"ts\">\nimport { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'\n\n// ----- Types for the pieces of Vuetify we reach into -----\n// These describe only what this file actually uses from the component ref,\n// so TypeScript stops treating it as `null`/`never`.\ninterface ComboboxExposed {\n  $el: HTMLElement\n  search: string\n  selectionIndex: number\n}\n\n// Values the user has entered (v-model on this component); each one renders as a chip.\nconst values = defineModel<string[]>({ default: () => [] })\n\n// Where the slotted button goes: 'start' = left of the field, full height;\n// 'top' = above the field, full width.\nwithDefaults(defineProps<{ buttonPosition?: 'start' | 'top' }>(), {\n  buttonPosition: 'start',\n})\n\n// ----- Uppercase as you type -----\n// Uppercase an input's text in place, keeping the caret where it was\n// (replacing the value would otherwise jump it to the end). Returns the text.\nfunction uppercaseInPlace(el: HTMLInputElement): string {\n  const upper = el.value.toUpperCase()\n  if (upper !== el.value) {\n    const { selectionStart, selectionEnd } = el\n    el.value = upper\n    if (selectionStart !== null && selectionEnd !== null) {\n      el.setSelectionRange(selectionStart, selectionEnd)\n    }\n  }\n  return upper\n}\n\n// Main input: Vuetify reports each change of the typed text through\n// update:search. v-combobox keeps that text internally (it ignores a :search\n// prop), so write the uppercase version back through its exposed `search`,\n// then put the caret back where it was, since rewriting the input's value\n// moves the caret to the end.\nfunction onSearchUpdate(text: string | null) {\n  const raw = text ?? ''\n  if (raw) duplicateNotice.value = ''\n  const upper = raw.toUpperCase()\n  const combo = comboRef.value\n  if (upper === raw || !combo) return\n  const el = combo.$el.querySelector<HTMLInputElement>('input:not(.chip-edit-input)')\n  const start = el?.selectionStart ?? null\n  const end = el?.selectionEnd ?? null\n  combo.search = upper\n  nextTick(() => {\n    if (el && document.activeElement === el && start !== null && end !== null) {\n      el.setSelectionRange(start, end)\n    }\n  })\n}\n\n// Inline chip editor.\nfunction onEditInput(e: Event) {\n  draft.value = uppercaseInPlace(e.target as HTMLInputElement)\n}\n\n// Every value must look like AB-123-CDE (uppercase letters).\n// Swap in your own pattern and update the \"AA-999-AAA\" messages below to match.\nconst CODE_PATTERN = /^[A-Z]{2}-\\d{3}-[A-Z]{3}$/\n\nfunction isValidCode(value: unknown): boolean {\n  return CODE_PATTERN.test(String(value))\n}\n\nconst invalidValues = computed(() => values.value.filter((v) => !isValidCode(v)))\nconst hasInvalid = computed(() => invalidValues.value.length > 0)\n\n// The message line under the field. It is linked to the input by\n// aria-describedby and is an aria-live region, so screen readers hear the instructions on focus\n// and hear the error as soon as it appears. The error names the failing values,\n// so it doesn't rely on the red border alone.\nconst fieldMessage = computed(() => {\n  if (duplicateNotice.value) return duplicateNotice.value\n  if (!hasInvalid.value) return 'Format AA-999-AAA. Press Enter to add each value.'\n  const list = invalidValues.value.join(', ')\n  return `Values must be in the format AA-999-AAA. Select a value to edit it, or remove it: ${list}`\n})\n\n// ----- No duplicate chips -----\n// Shown in the message line (so sighted users see why nothing was added, and\n// the live region reads it) until the user next types or the values change.\nconst duplicateNotice = ref('')\n\nfunction showDuplicates(dupes: string[]) {\n  if (!dupes.length) return\n  const list = [...new Set(dupes)].join(', ')\n  duplicateNotice.value =\n    dupes.length === 1 ? `${list} is already added.` : `Already added, skipped: ${list}.`\n}\n\nwatch(values, () => (duplicateNotice.value = ''))\n\n// Enter in the main input with a value that's already a chip. Vuetify would\n// \"re-select\" it, which moves the existing chip to the end, so catch Enter\n// first (capture phase on the wrapper, before Vuetify's own handler), leave\n// the chips alone, clear the typed text and say why.\nfunction onRowKeydownCapture(e: KeyboardEvent) {\n  if (e.key !== 'Enter' || editingIndex.value !== null) return\n  const target = e.target as HTMLElement | null\n  if (!target?.matches?.('input:not(.chip-edit-input)')) return\n  const combo = comboRef.value\n  if (!combo) return\n  if ((combo.selectionIndex ?? -1) >= 0) return\n  const text = String(combo.search ?? '').trim().toUpperCase()\n  if (!text || !values.value.includes(text)) return\n  e.preventDefault()\n  e.stopPropagation()\n  combo.search = ''\n  showDuplicates([text])\n}\n\n// Id for the message line, which the input points at with aria-describedby.\nconst messageId = useId()\n\n// Screen-reader-only announcement of chips being added or removed.\nconst announcement = ref('')\nwatch(values, (now, before = []) => {\n  const added = now.filter((v) => !before.includes(v))\n  const removed = before.filter((v) => !now.includes(v))\n  const parts: string[] = []\n  if (added.length) parts.push(`Added ${added.join(', ')}`)\n  if (removed.length) parts.push(`Removed ${removed.join(', ')}`)\n  if (parts.length) announcement.value = `${parts.join('. ')}. ${now.length} values.`\n})\n\n// ----- Editing a failing chip in place -----\n// The combobox component: used to find the inputs inside it and to read\n// which chip the arrow keys have highlighted (selectionIndex).\nconst comboRef = ref<ComboboxExposed | null>(null)\n\n// v-combobox adds dropdown ARIA (aria-haspopup, aria-expanded, aria-controls,\n// aria-owns) to the field box and input. With role=\"\" there is no dropdown,\n// so JAWS would announce a plain edit box as \"collapsed\" / \"has popup\".\n// Vuetify re-applies them on every render, so strip them whenever they appear.\nconst MENU_ARIA = ['aria-haspopup', 'aria-expanded', 'aria-controls', 'aria-owns']\nlet ariaObserver: MutationObserver | undefined\n\nfunction stripMenuAria(root: HTMLElement) {\n  root.querySelectorAll('.v-field, input:not(.chip-edit-input)').forEach((el) => {\n    MENU_ARIA.forEach((name) => el.hasAttribute(name) && el.removeAttribute(name))\n  })\n}\n\nonMounted(() => {\n  const root = comboRef.value?.$el\n  if (!root) return\n  stripMenuAria(root)\n  ariaObserver = new MutationObserver(() => stripMenuAria(root))\n  ariaObserver.observe(root, { subtree: true, attributes: true, attributeFilter: MENU_ARIA })\n})\n\nonBeforeUnmount(() => ariaObserver?.disconnect())\n\n// Index of the chip being edited (null when none) and the text being typed.\nconst editingIndex = ref<number | null>(null)\nconst draft = ref('')\n// Set when Escape cancels, so the blur that follows doesn't save.\nlet cancelling = false\n\n// Turn the chip's text into an input and focus it. selectAll selects the\n// whole value (used when Tab lands on the chip); otherwise the caret goes\n// to the end, so typing fixes rather than replaces.\nfunction startEdit(index: number, { selectAll = false }: { selectAll?: boolean } = {}) {\n  editingIndex.value = index\n  draft.value = String(values.value[index] ?? '')\n  nextTick(() => {\n    const input = comboRef.value?.$el.querySelector<HTMLInputElement>('.chip-edit-input')\n    if (!input) return\n    input.focus()\n    if (selectAll) {\n      input.select()\n    } else {\n      const end = input.value.length\n      input.setSelectionRange(end, end)\n    }\n  })\n}\n\n// Save the edit (Enter or leaving the input). An empty value removes the chip.\n// e is the blur event when the user tabbed/clicked away.\nfunction commitEdit(e?: FocusEvent) {\n  if (editingIndex.value === null) return\n  if (cancelling) {\n    cancelling = false\n    return\n  }\n  const index = editingIndex.value\n  const text = draft.value.trim()\n  editingIndex.value = null\n  // Chips are keyed by value, so changing the value rebuilds this chip and\n  // drops focus if it had just moved to the chip's own X (Tab). Note that\n  // case so focus can be put back on the rebuilt chip.\n  const target = e?.target as HTMLElement | null | undefined\n  const chipEl = target?.closest('.v-combobox__selection')\n  const relatedTarget = (e?.relatedTarget ?? null) as Node | null\n  const focusStayedInChip = !!chipEl && chipEl.contains(relatedTarget)\n  const next = [...values.value]\n  // Edited into a value that another chip already has: drop this chip.\n  const duplicate = !!text && next.some((v, i) => i !== index && v === text)\n  if (text && !duplicate) next.splice(index, 1, text)\n  else next.splice(index, 1)\n  values.value = next\n  nextTick(() => {\n    if (focusStayedInChip) {\n      const chips = comboRef.value?.$el.querySelectorAll<HTMLElement>('.v-combobox__selection')\n      const chip = chips?.[index]\n      // Same chip's X, or (if the chip was removed) the next chip's first control.\n      const focusTarget = text && !duplicate\n        ? chip?.querySelector<HTMLElement>('.v-chip__close')\n        : chip?.querySelector<HTMLElement>('button')\n      if (focusTarget) focusTarget.focus()\n      else focusMainInput()\n    }\n    if (duplicate) showDuplicates([text])\n    else if (!text) announcement.value = 'Value removed.'\n    else if (isValidCode(text)) announcement.value = `Saved ${text}.`\n    else announcement.value = `Saved ${text}. Still not in the format AA-999-AAA.`\n  })\n}\n\nfunction cancelEdit() {\n  cancelling = true\n  editingIndex.value = null\n  announcement.value = 'Edit cancelled.'\n  // Removing the input blurs it; the flag stops that blur from saving.\n  nextTick(() => (cancelling = false))\n}\n\n// After Enter or Escape, put focus back in the main input.\nfunction focusMainInput() {\n  nextTick(() =>\n    comboRef.value?.$el\n      .querySelector<HTMLInputElement>('input:not(.chip-edit-input)')\n      ?.focus(),\n  )\n}\n\n// Tabbing onto a failing chip's text goes straight into editing with the\n// value selected. A mouse press also focuses the button, so it's flagged\n// and left to the click handler (caret at the end) instead.\nlet pointerDown = false\n\nfunction onChipTextFocus(index: number) {\n  if (pointerDown) return\n  startEdit(index, { selectAll: true })\n}\n\nfunction onChipTextMousedown() {\n  pointerDown = true\n  // Cleared after the click (or if the press is dragged off the button).\n  setTimeout(() => (pointerDown = false), 500)\n}\n\n// Keys on a failing chip's text button. Handled directly rather than relying\n// on the browser turning Enter/Space into a click, so nothing upstream can\n// swallow it.\nfunction onChipTextKeydown(e: KeyboardEvent, index: number) {\n  if (['Enter', ' '].includes(e.key)) {\n    e.preventDefault()\n    startEdit(index)\n  }\n}\n\n// Keys in the main input. The combobox lets you move onto chips with the\n// Left/Right arrows (Backspace/Delete then removes the highlighted one).\n// Add: Enter on a highlighted failing chip edits it.\nfunction onComboKeydown(e: KeyboardEvent) {\n  if (editingIndex.value !== null) return\n  const selected = comboRef.value?.selectionIndex ?? -1\n  if (e.key !== 'Enter' || selected < 0) return\n  if (isValidCode(values.value[selected])) return\n  e.preventDefault()\n  startEdit(selected)\n}\n\n// Announce the chip the arrow keys land on, since the highlight is only visual.\nwatch(\n  () => comboRef.value?.selectionIndex,\n  (index) => {\n    if (index == null || index < 0) return\n    const value = values.value[index]\n    if (value === undefined) return\n    announcement.value = isValidCode(value)\n      ? `${value}. Press Delete to remove.`\n      : `${value}, not in the format AA-999-AAA. Press Enter to edit, Delete to remove.`\n  },\n)\n\nfunction onEditKeydown(e: KeyboardEvent) {\n  if (e.key === 'Enter') {\n    e.preventDefault()\n    commitEdit()\n    focusMainInput()\n  } else if (e.key === 'Escape') {\n    e.preventDefault()\n    cancelEdit()\n    focusMainInput()\n  }\n}\n\n// For parent components (hasInvalid is exposed below too): jump to the first\n// failing chip, in edit mode with its value selected (same as tabbing onto it).\n// With no failing chips, focus the main input instead. Returns true if a\n// failing chip was found.\nfunction focusFirstError(): boolean {\n  const index = values.value.findIndex((v) => !isValidCode(v))\n  if (index < 0) {\n    focusMainInput()\n    nextTick(() => (announcement.value = 'No values in error.'))\n    return false\n  }\n  startEdit(index, { selectAll: true })\n  return true\n}\n\ndefineExpose({ focusFirstError, hasInvalid })\n<\/script>\n\n<template>\n  <div style=\"max-width: 560px; margin-inline: auto\">\n    <!--\n      The button (passed in through the \"button\" slot) is a sibling of the\n      combobox, not inside it. Vuetify puts role=\"combobox\" on the .v-field\n      box, so anything in the prepend-inner slot becomes a child of the\n      combobox, and screen readers such as JAWS treat a combobox's children\n      as part of it rather than as separate controls. Out here it's a plain,\n      standalone button. CSS joins the two so they still look like one control.\n    -->\n    <div\n      class=\"combo-row\"\n      :class=\"{ 'combo-row--top': buttonPosition === 'top' }\"\n      @keydown.capture=\"onRowKeydownCapture\"\n    >\n      <slot name=\"button\" />\n\n      <!--\n        multiple + no items: typing a value and pressing Enter adds it to\n        v-model, and chips/closable-chips render each one as a chip whose\n        X removes it.\n\n        role=\"\": Vuetify puts role=\"combobox\" on both the field box and the\n        input. There is no dropdown list here, so that role is misleading, and\n        on the box it hides the chips' remove buttons from JAWS (children of a\n        combobox aren't exposed as separate controls). An empty role falls\n        back to the native semantics: a plain text input, and real buttons.\n      -->\n      <v-combobox\n        ref=\"comboRef\"\n        v-model=\"values\"\n        @keydown=\"onComboKeydown\"\n        @update:search=\"onSearchUpdate\"\n        class=\"tall-combobox\"\n        label=\"... or Enter Values\"\n        multiple\n        chips\n        closable-chips\n        hide-no-data\n        hide-details\n        role=\"\"\n        :aria-describedby=\"messageId\"\n        :aria-invalid=\"hasInvalid ? 'true' : undefined\"\n      >\n        <!--\n          props carries the chip's close handler; the combobox supplies its\n          text, size and closable through defaults. Failing values get a red border\n          plus an alert icon, so the state isn't shown by color alone.\n          close-label names the value, so the X button reads \"Remove AB-123-CDE\"\n          instead of just \"Close\".\n\n          Failing chips can be edited in place: their text is a button\n          (\"Edit AB-12\") that swaps to an input inside the chip. Tabbing onto it\n          starts editing with the value selected; clicking it, or Enter/Space,\n          also starts editing. From the main input, Left/Right arrow onto a\n          failing chip and press Enter. Enter or\n          leaving the input saves, Escape cancels. The input and button stop\n          keydown/mousedown/click from bubbling, because the chip treats\n          Enter/Space as \"remove this chip\" and the combobox field reacts to\n          keys and clicks as if they were meant for its own input.\n        -->\n        <template #chip=\"{ props, item, index }\">\n          <v-chip\n            v-bind=\"props\"\n            :class=\"{ 'invalid-chip': !isValidCode(item.title) }\"\n            :prepend-icon=\"isValidCode(item.title) ? undefined : 'mdi-alert-circle-outline'\"\n            :close-label=\"`Remove ${item.title}`\"\n          >\n            <input\n              v-if=\"editingIndex === index\"\n              :value=\"draft\"\n              @input=\"onEditInput\"\n              class=\"chip-edit-input\"\n              :size=\"Math.max(draft.length, 10)\"\n              :aria-label=\"`Edit value ${item.title}`\"\n              :aria-describedby=\"messageId\"\n              @keydown.stop=\"onEditKeydown\"\n              @mousedown.stop\n              @click.stop\n              @blur=\"commitEdit\"\n            />\n            <button\n              v-else-if=\"!isValidCode(item.title)\"\n              type=\"button\"\n              class=\"chip-text-btn\"\n              tabindex=\"0\"\n              :aria-label=\"`Edit ${item.title}, not in the format AA-999-AAA`\"\n              title=\"Click to edit\"\n              @keydown.stop=\"onChipTextKeydown($event, index)\"\n              @focus=\"onChipTextFocus(index)\"\n              @mousedown.stop=\"onChipTextMousedown\"\n              @click.stop=\"startEdit(index)\"\n            >\n              {{ item.title }}\n            <\/button>\n            <template v-else>{{ item.title }}<\/template>\n          <\/v-chip>\n        <\/template>\n\n      <\/v-combobox>\n    <\/div>\n\n    <!--\n      Message line, rendered here (not via the combobox's messages) so the\n      button can match the field's height. Red text only for the error, so\n      the field itself doesn't go into its error state.\n    -->\n    <div\n      :id=\"messageId\"\n      class=\"combo-message text-caption\"\n      :class=\"{ 'text-error': hasInvalid }\"\n      aria-live=\"polite\"\n    >\n      {{ fieldMessage }}\n    <\/div>\n  <\/div>\n\n  <!-- Polite live region for add/remove announcements; visually hidden. -->\n  <div class=\"sr-only\" aria-live=\"polite\" aria-atomic=\"true\">{{ announcement }}<\/div>\n<\/template>\n\n<style scoped>\n/* Button and combobox side by side, the button as tall as the field. */\n.combo-row {\n  display: flex;\n  align-items: stretch;\n}\n\n.combo-row .tall-combobox {\n  flex: 1 1 auto;\n}\n\n/* Give the field a taller box; it still grows past this as chips wrap. */\n.tall-combobox :deep(.v-field) {\n  min-height: 125px;\n  /* The filled variant only draws a bottom line; add top and right borders\n     in the same color and strength as that line. */\n  border-top: 1px solid rgba(var(--v-theme-on-surface), var(--v-field-border-opacity, 0.38));\n  border-right: 1px solid rgba(var(--v-theme-on-surface), var(--v-field-border-opacity, 0.38));\n  /* Square left corner where it meets the button; round the outer\n     bottom-right corner to match the button's outer corners. */\n  border-top-left-radius: 0;\n  border-bottom-right-radius: 4px;\n}\n\n.combo-row--top {\n  flex-direction: column;\n}\n\n.combo-row--top .tall-combobox :deep(.v-field) {\n  /* Both top corners meet the button now. */\n  border-top-right-radius: 0;\n}\n\n.combo-message {\n  min-height: 20px;\n  padding: 4px 16px 0;\n}\n\n/*\n * Lighter grey fill. The filled variant's grey is an overlay of the text\n * color at 4% opacity (more on hover/focus); these halve each of those.\n */\n.tall-combobox :deep(.v-field.v-field--variant-filled .v-field__overlay) {\n  opacity: 0.02;\n}\n@media (hover: hover) {\n  .tall-combobox :deep(.v-field.v-field--variant-filled:hover .v-field__overlay) {\n    opacity: calc((0.02 + var(--v-hover-opacity) / 2) * var(--v-theme-overlay-multiplier));\n  }\n}\n.tall-combobox :deep(.v-field.v-field--variant-filled.v-field--focused .v-field__overlay) {\n  opacity: calc((0.02 + var(--v-focus-opacity) / 2) * var(--v-theme-overlay-multiplier));\n}\n\n/* Red border on chips whose value isn't AA-999-AAA. */\n.tall-combobox :deep(.invalid-chip) {\n  border: 2px solid rgb(var(--v-theme-error));\n}\n\n/* Hidden visually but still read by screen readers. */\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}\n\n/* The text of a failing chip: a button that looks like text, hinting it's editable. */\n.chip-text-btn {\n  font: inherit;\n  color: inherit;\n  cursor: text;\n  text-decoration: underline dotted;\n  text-underline-offset: 3px;\n  border-radius: 2px;\n}\n\n.chip-text-btn:focus-visible,\n.chip-edit-input:focus-visible {\n  outline: 2px solid rgb(var(--v-theme-primary));\n  outline-offset: 1px;\n}\n\n/* Inline input that replaces a chip's text while editing. */\n.chip-edit-input {\n  font: inherit;\n  color: inherit;\n  background: rgb(var(--v-theme-surface));\n  border-radius: 2px;\n  padding: 0 2px;\n  min-width: 0;\n}\n<\/style>\n\n<style>\n/*\n * Unscoped on purpose: the button comes from the parent page through the\n * \"button\" slot, and this component's scoped styles can't reach slotted\n * content. Add class=\"picklist-btn\" to the button you pass in.\n */\n.combo-row .picklist-btn {\n  height: auto !important;\n  /* Joined to the field: no gap, rounded only on its outer (left) corners. */\n  border-radius: 4px 0 0 4px;\n  /* The label wraps onto extra lines instead of widening the button. */\n  width: 106px;\n  min-width: 0;\n  padding-inline: 8px;\n}\n\n/* Vuetify keeps button text on one line; allow wrapping here. */\n.combo-row .picklist-btn .v-btn__content {\n  white-space: normal;\n  line-height: 1.3;\n  text-align: center;\n}\n\n/* buttonPosition=\"top\": button stacked above the field, same width as it. */\n.combo-row--top .picklist-btn {\n  width: 100%;\n  height: 40px !important;\n  border-radius: 4px 4px 0 0;\n}\n<\/style>\n";
+
+try { if (window.hljs) document.querySelectorAll('pre.code code').forEach((el) => hljs.highlightElement(el)); } catch (e) {}
+
+// Tabs
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function selectTab(tab) {
+  tabs.forEach((t) => {
+    const on = t === tab;
+    t.setAttribute('aria-selected', on);
+    t.tabIndex = on ? 0 : -1;
+    document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+  });
+}
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => selectTab(t));
+  t.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    selectTab(next);
+    next.focus();
+  });
+});
+
+// Copy
+function flash(btn, label) {
+  const old = btn.dataset.label || btn.textContent;
+  btn.dataset.label = old;
+  btn.textContent = label;
+  btn.classList.add('done');
+  setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1600);
+}
+function selectText(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+function copy(btn, text, el) {
+  try {
+    navigator.clipboard.writeText(text).then(
+      () => flash(btn, 'Copied'),
+      () => { if (el) selectText(el); flash(btn, 'Selected, press Ctrl+C'); }
+    );
+  } catch (e) {
+    if (el) selectText(el);
+    flash(btn, 'Selected, press Ctrl+C');
+  }
+}
+document.querySelectorAll('[data-copy]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const el = document.getElementById(btn.dataset.copy);
+    copy(btn, el.textContent, el);
+  });
+});
+document.querySelector('[data-copy-active]').addEventListener('click', (e) => {
+  const panel = document.querySelector('[role="tabpanel"]:not([hidden]) code');
+  copy(e.currentTarget, panel.textContent, panel);
+});
+document.querySelector('[data-copy-full]').addEventListener('click', (e) => {
+  copy(e.currentTarget, FULL_FILE, document.querySelector('[role="tabpanel"]:not([hidden]) code'));
+});
+</script>
+
+<script type="text/x-template" id="tpl">
+  <header>
+    <h1>Combobox Chips Demo</h1>
+    <p class="muted">A working version of the chip field: type codes in the format <strong>AA-999-AAA</strong>, fix the ones that don't match, and try the Next button. <a href="#code">Jump to the code</a></p>
+  </header>
+
+  <div class="layout">
+    <div class="card">
+      <div class="card-top">
+        <div class="ctl">
+          <span class="ctl-label" id="pos-label">Button position</span>
+          <div class="seg" role="group" aria-labelledby="pos-label">
+            <button type="button" :aria-pressed="String(buttonPosition === 'start')" @click="buttonPosition = 'start'">Side</button>
+            <button type="button" :aria-pressed="String(buttonPosition === 'top')" @click="buttonPosition = 'top'">Top</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <button type="button" class="text-btn" @click="resetExample">Reset example</button>
+          <button type="button" class="text-btn" @click="clearAll">Clear all</button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="combo">
+          <div class="combo-row" :class="{ top: buttonPosition === 'top' }">
+            <button ref="picklistBtn" type="button" class="picklist-btn" @click="openPicklist">Select from Picklist</button>
+
+            <div ref="fieldEl" class="field" @mousedown="onFieldMousedown">
+              <span class="field-label" id="field-label">... or Enter Values</span>
+              <div class="chips">
+                <span
+                  v-for="(v, i) in values"
+                  :key="v"
+                  class="chip"
+                  :class="{ invalid: !isValid(v), selected: i === selectionIndex }"
+                >
+                  <svg v-if="!isValid(v)" class="alert" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z"/></svg>
+                  <input
+                    v-if="editingIndex === i"
+                    class="chip-edit-input"
+                    :value="draft"
+                    :size="Math.max(draft.length, 10)"
+                    :aria-label="'Edit value ' + v"
+                    aria-describedby="combo-msg"
+                    @input="onEditInput"
+                    @keydown.stop="onEditKeydown"
+                    @mousedown.stop
+                    @click.stop
+                    @blur="commitEdit"
+                  >
+                  <button
+                    v-else-if="!isValid(v)"
+                    type="button"
+                    class="chip-text-btn"
+                    :aria-label="'Edit ' + v + ', not in the format AA-999-AAA'"
+                    title="Click to edit"
+                    @keydown.stop="onChipTextKeydown($event, i)"
+                    @focus="onChipTextFocus(i)"
+                    @mousedown.stop="onChipTextMousedown"
+                    @click.stop="startEdit(i)"
+                  >{{ v }}</button>
+                  <span v-else>{{ v }}</span>
+                  <button type="button" class="chip-close" :aria-label="'Remove ' + v" @mousedown.stop @click.stop="removeAt(i)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/></svg>
+                  </button>
+                </span>
+                <input
+                  ref="mainInput"
+                  id="main-input"
+                  class="main-input"
+                  :value="search"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-labelledby="field-label"
+                  aria-describedby="combo-msg"
+                  :aria-invalid="hasInvalid ? 'true' : undefined"
+                  @input="onSearchInput"
+                  @keydown="onMainKeydown"
+                  @blur="selectionIndex = -1"
+                >
+              </div>
+            </div>
+          </div>
+          <div id="combo-msg" class="combo-message" :class="{ error: hasInvalid }" aria-live="polite">{{ fieldMessage }}</div>
+        </div>
+      </div>
+
+      <div class="card-foot">
+        <template v-if="step === 1">
+          <span class="step-label">Step 1 of 2 · Codes</span>
+          <div class="ctl">
+            <span v-if="stepNote" class="step-note" role="status">{{ stepNote }}</span>
+            <button type="button" class="btn primary" @click="next">Next</button>
+          </div>
+        </template>
+        <template v-else>
+          <span class="step-done" role="status">Step 2 of 2 · All {{ values.length }} codes passed.</span>
+          <button type="button" class="btn" @click="step = 1">Back</button>
+        </template>
+      </div>
+    </div>
+
+    <aside class="tips" aria-labelledby="tips-h">
+      <h2 id="tips-h">Things to try</h2>
+      <ul>
+        <li><span class="try">Add a value</span><span class="muted">Type <kbd>ab-123-cde</kbd> and press <kbd>Enter</kbd>. It's uppercased as you type.</span></li>
+        <li><span class="try">Fix a bad chip</span><span class="muted">Click its text, or <kbd>Tab</kbd> onto it. <kbd>Enter</kbd> saves, <kbd>Esc</kbd> cancels.</span></li>
+        <li><span class="try">Move between chips</span><span class="muted">From an empty input, <kbd>←</kbd> <kbd>→</kbd> highlight chips. <kbd>Enter</kbd> edits a bad one, <kbd>Delete</kbd> removes it.</span></li>
+        <li><span class="try">Add a duplicate</span><span class="muted">It isn't added, and the message line says why.</span></li>
+        <li><span class="try">Press Next with an error</span><span class="muted">It stays on the step and opens the first bad chip for editing.</span></li>
+        <li><span class="try">Use the Picklist</span><span class="muted">Pick codes in the dialog. Already-added ones are skipped.</span></li>
+      </ul>
+    </aside>
+  </div>
+
+  <p class="footnote">This demo rebuilds the component in plain Vue so it can run on this page. Behavior matches ComboboxChips.vue; the look approximates Vuetify's filled field. The real component is below.</p>
+
+  <div class="sr-only" aria-live="polite" aria-atomic="true">{{ announcement }}</div>
+
+  <div v-if="dialog" class="scrim" @mousedown.self="closeDialog(false)">
+    <div ref="dialogEl" class="dialog" role="dialog" aria-modal="true" aria-labelledby="pick-title" @keydown="onDialogKeydown">
+      <h3 id="pick-title">Picklist</h3>
+      <fieldset>
+        <legend>Select one or more codes to add.</legend>
+        <label v-for="code in options" :key="code">
+          <input type="checkbox" :value="code" v-model="picked">
+          {{ code }}
+        </label>
+      </fieldset>
+      <div class="dialog-actions">
+        <button type="button" class="btn" @click="closeDialog(false)">Cancel</button>
+        <button type="button" class="btn primary" :disabled="!picked.length" @click="addSelections">Add selections</button>
+      </div>
+    </div>
+  </div>
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, computed, watch, nextTick } = Vue;
+
+createApp({
+  template: '#tpl',
+  setup() {
+    const CODE_PATTERN = /^[A-Z]{2}-\d{3}-[A-Z]{3}$/;
+    const isValid = (v) => CODE_PATTERN.test(String(v));
+    const EXAMPLE = ['AB-123-CDE', 'QX-904-LMN', 'ZZ-12-ABC'];
+
+    const values = ref([...EXAMPLE]);
+    const search = ref('');
+    const selectionIndex = ref(-1);
+    const editingIndex = ref(null);
+    const draft = ref('');
+    const duplicateNotice = ref('');
+    const announcement = ref('');
+    const buttonPosition = ref('start');
+    const step = ref(1);
+    const stepNote = ref('');
+
+    const mainInput = ref(null);
+    const picklistBtn = ref(null);
+    const fieldEl = ref(null);
+    const dialogEl = ref(null);
+
+    let cancelling = false;
+    let pointerDown = false;
+
+    const invalidValues = computed(() => values.value.filter((v) => !isValid(v)));
+    const hasInvalid = computed(() => invalidValues.value.length > 0);
+    const fieldMessage = computed(() => {
+      if (duplicateNotice.value) return duplicateNotice.value;
+      if (!hasInvalid.value) return 'Format AA-999-AAA. Press Enter to add each value.';
+      return 'Values must be in the format AA-999-AAA. Select a value to edit it, or remove it: ' + invalidValues.value.join(', ');
+    });
+
+    function showDuplicates(dupes) {
+      if (!dupes.length) return;
+      const list = [...new Set(dupes)].join(', ');
+      duplicateNotice.value = dupes.length === 1 ? list + ' is already added.' : 'Already added, skipped: ' + list + '.';
+    }
+
+    watch(values, (now, before = []) => {
+      duplicateNotice.value = '';
+      stepNote.value = '';
+      const added = now.filter((v) => !before.includes(v));
+      const removed = before.filter((v) => !now.includes(v));
+      const parts = [];
+      if (added.length) parts.push('Added ' + added.join(', '));
+      if (removed.length) parts.push('Removed ' + removed.join(', '));
+      if (parts.length) announcement.value = parts.join('. ') + '. ' + now.length + ' values.';
+    });
+
+    watch(selectionIndex, (i) => {
+      if (i < 0) return;
+      const v = values.value[i];
+      if (v === undefined) return;
+      announcement.value = isValid(v)
+        ? v + '. Press Delete to remove.'
+        : v + ', not in the format AA-999-AAA. Press Enter to edit, Delete to remove.';
+    });
+
+    function uppercaseInPlace(el) {
+      const upper = el.value.toUpperCase();
+      if (upper !== el.value) {
+        const s = el.selectionStart, e = el.selectionEnd;
+        el.value = upper;
+        if (s !== null && e !== null) el.setSelectionRange(s, e);
+      }
+      return upper;
+    }
+
+    function focusMain() {
+      nextTick(() => mainInput.value && mainInput.value.focus());
+    }
+
+    function removeAt(i) {
+      const next = [...values.value];
+      next.splice(i, 1);
+      values.value = next;
+      focusMain();
+    }
+
+    function onSearchInput(e) {
+      const upper = uppercaseInPlace(e.target);
+      search.value = upper;
+      selectionIndex.value = -1;
+      if (upper) duplicateNotice.value = '';
+    }
+
+    function addTyped() {
+      const text = search.value.trim().toUpperCase();
+      if (!text) return;
+      search.value = '';
+      if (values.value.includes(text)) { showDuplicates([text]); return; }
+      values.value = [...values.value, text];
+    }
+
+    function onMainKeydown(e) {
+      const sel = selectionIndex.value;
+      const len = values.value.length;
+      if (sel >= 0) {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); selectionIndex.value = Math.max(0, sel - 1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); selectionIndex.value = sel < len - 1 ? sel + 1 : -1; }
+        else if (e.key === 'Enter') { e.preventDefault(); if (!isValid(values.value[sel])) startEdit(sel); }
+        else if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          const next = [...values.value];
+          next.splice(sel, 1);
+          values.value = next;
+          selectionIndex.value = next.length ? Math.min(sel, next.length - 1) : -1;
+        }
+        else if (e.key === 'Escape') { selectionIndex.value = -1; }
+        else if (e.key.length === 1) { selectionIndex.value = -1; }
+        return;
+      }
+      if (e.key === 'Enter') { e.preventDefault(); addTyped(); return; }
+      const atStart = e.target.selectionStart === 0 && e.target.selectionEnd === 0;
+      if (len && ((e.key === 'ArrowLeft' && atStart) || (e.key === 'Backspace' && !search.value))) {
+        e.preventDefault();
+        selectionIndex.value = len - 1;
+      }
+    }
+
+    function onFieldMousedown(e) {
+      if (e.target.closest('.chip, button, input')) return;
+      e.preventDefault();
+      focusMain();
+    }
+
+    function startEdit(index, opts) {
+      const selectAll = !!(opts && opts.selectAll);
+      selectionIndex.value = -1;
+      editingIndex.value = index;
+      draft.value = String(values.value[index] ?? '');
+      nextTick(() => {
+        const input = fieldEl.value && fieldEl.value.querySelector('.chip-edit-input');
+        if (!input) return;
+        input.focus();
+        if (selectAll) input.select();
+        else input.setSelectionRange(input.value.length, input.value.length);
+      });
+    }
+
+    function onEditInput(e) { draft.value = uppercaseInPlace(e.target); }
+
+    function commitEdit(e) {
+      if (editingIndex.value === null) return;
+      if (cancelling) { cancelling = false; return; }
+      const index = editingIndex.value;
+      const text = draft.value.trim();
+      editingIndex.value = null;
+      const target = e && e.target;
+      const chipEl = target && target.closest ? target.closest('.chip') : null;
+      const focusStayedInChip = !!chipEl && chipEl.contains((e && e.relatedTarget) || null);
+      const next = [...values.value];
+      const duplicate = !!text && next.some((v, i) => i !== index && v === text);
+      if (text && !duplicate) next.splice(index, 1, text);
+      else next.splice(index, 1);
+      values.value = next;
+      nextTick(() => {
+        if (focusStayedInChip) {
+          const chip = fieldEl.value.querySelectorAll('.chip')[index];
+          const t = text && !duplicate ? chip && chip.querySelector('.chip-close') : chip && chip.querySelector('button');
+          if (t) t.focus(); else focusMain();
+        }
+        if (duplicate) showDuplicates([text]);
+        else if (!text) announcement.value = 'Value removed.';
+        else if (isValid(text)) announcement.value = 'Saved ' + text + '.';
+        else announcement.value = 'Saved ' + text + '. Still not in the format AA-999-AAA.';
+      });
+    }
+
+    function cancelEdit() {
+      cancelling = true;
+      editingIndex.value = null;
+      announcement.value = 'Edit cancelled.';
+      nextTick(() => (cancelling = false));
+    }
+
+    function onEditKeydown(e) {
+      if (e.key === 'Enter') { e.preventDefault(); commitEdit(); focusMain(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); focusMain(); }
+    }
+
+    function onChipTextFocus(i) { if (!pointerDown) startEdit(i, { selectAll: true }); }
+    function onChipTextMousedown() { pointerDown = true; setTimeout(() => (pointerDown = false), 500); }
+    function onChipTextKeydown(e, i) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEdit(i); }
+    }
+
+    function focusFirstError() {
+      const index = values.value.findIndex((v) => !isValid(v));
+      if (index < 0) { focusMain(); return false; }
+      startEdit(index, { selectAll: true });
+      return true;
+    }
+
+    function next() {
+      if (!values.value.length) {
+        stepNote.value = 'Add at least one value first.';
+        focusMain();
+        return;
+      }
+      if (hasInvalid.value) {
+        const n = invalidValues.value.length;
+        focusFirstError();
+        nextTick(() => (stepNote.value = 'Fix ' + n + (n === 1 ? ' value' : ' values') + ' first.'));
+        return;
+      }
+      stepNote.value = '';
+      step.value = 2;
+    }
+
+    // ----- Picklist dialog -----
+    const dialog = ref(false);
+    const options = ref([]);
+    const picked = ref([]);
+    const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const DIGITS = '0123456789';
+    const rand = (chars, n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+    function openPicklist() {
+      const codes = new Set(values.value.filter(isValid).slice(0, 1)); // one already-added code, to show skipping
+      while (codes.size < 10) codes.add(rand(LETTERS, 2) + '-' + rand(DIGITS, 3) + '-' + rand(LETTERS, 3));
+      options.value = [...codes];
+      picked.value = [];
+      dialog.value = true;
+      nextTick(() => {
+        const first = dialogEl.value && dialogEl.value.querySelector('input');
+        if (first) first.focus();
+      });
+    }
+
+    function closeDialog(added) {
+      dialog.value = false;
+      nextTick(() => {
+        if (added) focusMain();
+        else if (picklistBtn.value) picklistBtn.value.focus();
+      });
+    }
+
+    function addSelections() {
+      const codes = [...picked.value];
+      const toAdd = [...new Set(codes)].filter((c) => !values.value.includes(c));
+      const skipped = codes.filter((c) => values.value.includes(c));
+      if (toAdd.length) values.value = [...values.value, ...toAdd];
+      nextTick(() => showDuplicates(skipped));
+      closeDialog(true);
+    }
+
+    function onDialogKeydown(e) {
+      if (e.key === 'Escape') { e.preventDefault(); closeDialog(false); return; }
+      if (e.key !== 'Tab') return;
+      const items = [...dialogEl.value.querySelectorAll('input, button:not(:disabled)')];
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+
+    function resetExample() { values.value = [...EXAMPLE]; search.value = ''; step.value = 1; editingIndex.value = null; }
+    function clearAll() { values.value = []; search.value = ''; step.value = 1; editingIndex.value = null; focusMain(); }
+
+    return {
+      values, search, selectionIndex, editingIndex, draft, announcement, buttonPosition, step, stepNote,
+      mainInput, picklistBtn, fieldEl, dialogEl, hasInvalid, fieldMessage, isValid,
+      removeAt, onSearchInput, onMainKeydown, onFieldMousedown, startEdit, onEditInput, commitEdit,
+      onEditKeydown, onChipTextFocus, onChipTextMousedown, onChipTextKeydown, next,
+      dialog, options, picked, openPicklist, closeDialog, addSelections, onDialogKeydown,
+      resetExample, clearAll,
+    };
+  },
+}).mount('#app');
+</script>
+
+</body>
+</html>
